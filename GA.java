@@ -16,8 +16,8 @@ public class GA {
     final static double stepSize1 = 1;
     final static double stepSize2 = -1*stepSize1;
 
-    final static int pctChanceOfMutation = 50;
-    final static int pctChanceOfCrossover = 40;
+    final static int pctChanceOfMutation = 80;
+    final static int pctChanceOfCrossover = 80;
 
     static int iterationLimit = 1;
 
@@ -64,7 +64,7 @@ public class GA {
             for(int i = 0; i < points.length; i++){
                 double fitness = function(points[i].getX(),points[i].getY());               //set each point's fitness to its function output
                 points[i].setFitness(fitness);
-                System.out.println("Point " +i+" fitness:" + points[i].getFitness());
+                System.out.println("Point "+points[i].getLocation()+" ("+points[i].getX()+","+points[i].getY()+"," + points[i].getFitness());
             }
             insertionSort(points);                                                          //sort the array by fitness
             for(int i = 0; i < points.length; i++){
