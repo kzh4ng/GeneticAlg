@@ -1,4 +1,5 @@
 import java.util.Random;
+import java.util.Scanner;
 
 /**
  * Created by Kevin on 11/7/2015.
@@ -9,9 +10,9 @@ public class GA {
     final static double startY = 0;
 
     final static int populationSize = 10;
+    final static int numberOfSurvivors = 5;
+    final static double probabilityConstant = .4;
     static Point points[] = new Point[populationSize];
-    static Point pointsForCrossover[] = new Point[populationSize];
-    static double numberOfPointsForCrossover = 0;
 
     final static double stepSize1 = 1;
     final static double stepSize2 = -1*stepSize1;
@@ -19,7 +20,7 @@ public class GA {
     final static int pctChanceOfMutation = 80;
     final static int pctChanceOfCrossover = 80;
 
-    static int iterationLimit = 1;
+    static int iterationLimit = 10;
 
     public static void main(String args[]){
         for(int i = 0; i < points.length; i++){                 //initializes all points to starting point and default mutation/crossover setting
@@ -29,16 +30,18 @@ public class GA {
             points[i].setMutate(false);
             points[i].setCrossover(false);
         }
-        int j = 0;
+        int iteration = 0;
         Random r = new Random();
         int mutation;
-        while(j < iterationLimit){
+        while(iteration < iterationLimit){
             for(int k = 0; k<points.length; k++){                        //determine mutation for all points
                 mutation = r.nextInt(101);
                 if(mutation <= pctChanceOfMutation) mutate(points[k]);
                 points[k].setLocation(k);
                 printPoint(points[k]);
             }
+            double numberOfPointsForCrossover = 0;
+            Point pointsForCrossover[] = new Point[populationSize];
             for(int k = 0; k < points.length; k++){                     //mark some points for crossover
                 int crossover = r.nextInt(101);
                 if(crossover <= pctChanceOfCrossover){
@@ -53,7 +56,7 @@ public class GA {
                     index++;
                 }
             }
-            crossover();
+            pointsForCrossover = crossover(numberOfPointsForCrossover, pointsForCrossover);
             for(int l = 0; l < numberOfPointsForCrossover; l++){
                 points[pointsForCrossover[l].getLocation()] = pointsForCrossover[l];        //put back all the points that underwent crossover
             }
@@ -64,13 +67,33 @@ public class GA {
             for(int i = 0; i < points.length; i++){
                 double fitness = function(points[i].getX(),points[i].getY());               //set each point's fitness to its function output
                 points[i].setFitness(fitness);
-                System.out.println("Point "+points[i].getLocation()+" ("+points[i].getX()+","+points[i].getY()+"," + points[i].getFitness());
             }
-            insertionSort(points);                                                          //sort the array by fitness
+            insertionSort();                                                          //sort the array by fitness (most fit at the end of the array
+            System.out.println("Points after sort:");
             for(int i = 0; i < points.length; i++){
-
+                System.out.print("[" + points[i].getX() + "," + points[i].getY() + "," + points[i].getFitness() + "],");
             }
-            j++;
+            determineProbabilities();
+            determineSurvivors();
+
+
+            Point newPoints[] = new Point[populationSize];
+            int newPointCount = 0;
+            for (int i = 0; newPointCount<numberOfSurvivors;){              //put all the survivors in a new array
+                while(!points[i].isSurvive()) i++;
+                newPoints[newPointCount] = points[i];
+                i++;
+                newPointCount++;
+            }
+            Point p = averagePoint(newPoints);
+            for(int i = numberOfSurvivors; i < populationSize; i++){
+                newPoints[i] = p;
+            }
+            System.out.println("Iteration finished, press enter to continue to next iteration");
+            Scanner scan = new Scanner(System.in);
+            scan.nextLine();
+            points = newPoints;
+            iteration++;
         }
     }
 
@@ -80,42 +103,85 @@ public class GA {
     }
     static Point mutate(Point p){
         Random r = new Random();
-        int random = r.nextInt(11);                                 //generate a random number from one to ten
-        int determineVariable = r.nextInt(2);
+        double random = r.nextDouble();                                 //generate a random number from zero to one
+        double random2 = r.nextDouble();
+        int determineVariable = r.nextInt(3);
         double range = stepSize1 - stepSize2;                               // is the range of the mutations
-        double increment = range / 10;                              //this allows for the mutation to be one of ten evenly spaced values within the range
-        double mutation = random * increment;
+        double mutation = random * range + stepSize2;
+        double mutation2 = random2 * range + stepSize2;
         if(determineVariable == 0){                                             //the following if statements only allow either x or y to be mutated
-            p.setX(p.getX()+mutation+stepSize2);
+            p.setX(p.getX()+mutation);
+        }
+        else if(determineVariable == 1){
+            p.setY(p.getY()+mutation);
         }
         else{
-            p.setY(p.getY()+mutation+stepSize2);
+            p.setX(p.getX()+mutation);
+            p.setY(p.getY()+mutation2);
         }
         return p;
     }
 
     static void printPoint(Point p){
-        System.out.println("Point "+p.getLocation()+" ("+p.getX()+","+p.getY()+")");
+        System.out.println("["+p.getX()+","+p.getY()+","+p.getFitness()+"]");
     }
 
-    static void crossover(){
-        double numberOfPairs = Math.floor(numberOfPointsForCrossover/2);
-        int number = (int) numberOfPointsForCrossover;                                      //number of entries in crossover array
+    static Point[] crossover(double crossoverPoints, Point points[]){
+        double numberOfPairs = Math.floor(crossoverPoints/2);
+        int number = (int) crossoverPoints;                                      //number of entries in crossover array
         for(int i = 0; i < numberOfPairs; i++){                                             //only do this for the number of pairs
-            double temp = pointsForCrossover[i].getY();
-            pointsForCrossover[i].setY(pointsForCrossover[number-1-i].getY());              //swap Y values
-            pointsForCrossover[number-1-i].setY(temp);
+            double temp = points[i].getY();
+            points[i].setY(points[number-1-i].getY());              //swap Y values
+            points[number-1-i].setY(temp);
         }
+        return points;
     }
-    static void insertionSort(Point array[]) {                              //insertion sort puts minimum at front
-        for (int j = 1; j < array.length; j++) {
-            Point key = array[j];
+    static void insertionSort() {                              //insertion sort puts minimum at front
+        for (int j = 1; j < populationSize; j++) {
+            Point key = points[j];
             int i = j-1;
-            while ( (i > -1) && ( array[i].getFitness() > key.getFitness() ) ) {
-                array[i+1] = array[i];
+            while ( (i > -1) && ( points[i].getFitness() > key.getFitness() ) ) {
+                points[i+1] = points[i];
                 i--;
             }
-            array[i+1] = key;
+            points[i+1] = key;
+        }
+    }
+    static Point averagePoint(Point p[]){               //returns a point with the average X and Y value of an array of points
+        double sumX = 0;
+        double sumY = 0;
+        for(int i = 0; i < numberOfSurvivors; i++){
+            sumX = sumX + p[i].getX();
+            sumY = sumY + p[i].getY();
+        }
+        Point point = new Point();
+        point.setX(sumX/numberOfSurvivors);
+        point.setY(sumY/numberOfSurvivors);
+        return point;
+    }
+    static void determineProbabilities(){
+        for(int i = 0; i < points.length; i++){
+            if(i==0){
+                points[i].setProbabiliyOfSurvival(1-probabilityConstant);               //first rank item has 1-p probability of survival
+            }
+            else{
+                points[i].setProbabiliyOfSurvival(probabilityConstant*Math.pow(1-probabilityConstant,i)); //remaining have p(1-p)^i probability
+            }
+        }
+    }
+
+    static void determineSurvivors(){
+        int survivorCount = 0;
+        int index = 0;
+        Random r = new Random();
+        while(survivorCount != numberOfSurvivors){
+            double random = r.nextDouble();                                                             //generates a random number from 0-1
+            if(random < points[index].getProbabiliyOfSurvival()&& !points[index].isSurvive()){              //if the number is less than the probability and the point hasn't been marked as true yet
+                points[index].setSurvive(true);
+                survivorCount++;
+            }
+            index++;
+            index = index%populationSize;                               //keeps the indexes within the population size
         }
     }
 }

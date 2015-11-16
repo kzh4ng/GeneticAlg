@@ -10,6 +10,7 @@ public class Point {
     private int location;
     private double fitness;
     private double probabiliyOfSurvival;
+    private boolean survive = false;
 
     public Point(){}
     public double getX() {
@@ -65,5 +66,13 @@ public class Point {
 
     public void setProbabiliyOfSurvival(double probabiliyOfSurvival) {
         this.probabiliyOfSurvival = probabiliyOfSurvival;
+    }
+
+    public boolean isSurvive() {
+        return survive;
+    }
+
+    public void setSurvive(boolean survive) {
+        this.survive = survive;
     }
 }
